@@ -6,10 +6,8 @@
 Run this command to install/update Cursor directly without cloning the repository:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/hieutt192/Cursor-ubuntu/refs/heads/main/manage_cursor.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/zudsniper/Cursor-ubuntu/refs/heads/main/manage_cursor.sh)"
 ```
-
-> **Note:** For Ubuntu 24.04 installation, please switch to the `Cursor-ubuntu24.04` branch or visit: [Link](https://github.com/hieutt192/Cursor-ubuntu/tree/Cursor-ubuntu24.04)
 
 ---
 
@@ -24,7 +22,7 @@ When you run the script, you'll see a user-friendly menu interface:
 / /___/ /_/ / /  (__  ) /_/ / /     / ___ |_/ /   _/ // /_/ / /___   
 \____/\__,_/_/  /____/\____/_/     /_/  |_/___/  /___/_____/_____/   
                                                                      
-For Ubuntu 22.04
+For Linux
 -------------------------------------------------
   /\_/\
  ( o.o )
@@ -38,7 +36,7 @@ Note: If the menu reappears after choosing an option, check any error message ab
 Please choose an option (1, 2, or 3): 
 ```
 
-This is a guideline and script for installing or updating Cursor on Ubuntu 22.04.
+This is a script for installing, updating, or uninstalling Cursor on Linux.
 
 ## ✨ Features
 - 🚀 **One-line Installation:** Install directly from GitHub without cloning
@@ -47,13 +45,14 @@ This is a guideline and script for installing or updating Cursor on Ubuntu 22.04
 - 🗑️ **Complete Uninstall:** Remove Cursor and all related files
 - 🎨 **Icon Selection:** Choose your preferred application icon
 - 🖥️ **Desktop Integration:** Automatic menu entry creation
+- 🐧 **Broad Linux Support:** Works on Ubuntu, Fedora, Arch, openSUSE, and more
 
 ## ⚙️ Prerequisites
-- 🐧 Ubuntu 22.04 or compatible Linux distribution
+- 🐧 A Linux distribution with one of: `apt`, `dnf`, `yum`, `pacman`, or `zypper`
 - 🌐 Internet connection
 - 🔑 `sudo` privileges
 - 📦 `curl` (auto-installed if missing)
-- 📦 `libfuse2` (auto-installed if missing)
+- 📦 FUSE 2 library (auto-installed if missing)
 
 ---
 
@@ -64,10 +63,10 @@ This is a guideline and script for installing or updating Cursor on Ubuntu 22.04
 ---
 
 ## ⚠️ Important Notes
-- **Ubuntu 22.04:** The script automatically installs `libfuse2` for AppImage support
-- **Ubuntu 24.04+:** Do NOT install `libfuse2` manually - it can cause graphical issues
+- **FUSE support:** The script automatically installs the appropriate FUSE library for AppImage support
 - **Restart recommended:** For best experience, restart after installation
 - **Sudo required:** Script needs admin privileges for system-wide installation
+- **Supported distros:** Ubuntu, Debian, Fedora, Arch Linux, openSUSE, and other distributions with `apt`, `dnf`, `yum`, `pacman`, or `zypper`
 
 ---
 
@@ -75,10 +74,10 @@ This is a guideline and script for installing or updating Cursor on Ubuntu 22.04
 If you encounter any issues:
 1. **Permission errors:** Ensure you have `sudo` privileges and active internet connection
 2. **Script fails to download:** Check your network connection and try again
-3. **Cursor won't start:** The script handles `libfuse2` automatically, but you can verify with:
-   ```bash
-   sudo apt update && sudo apt install libfuse2
-   ```
+3. **Cursor won't start:** The script handles FUSE libraries automatically, but you can verify with:
+   - **Ubuntu/Debian:** `sudo apt install libfuse2` (or `libfuse2t64` on 24.04+)
+   - **Fedora/RHEL:** `sudo dnf install fuse-libs`
+   - **Arch Linux:** `sudo pacman -S fuse2`
 4. **Desktop entry missing:** Log out and log back in, or restart your computer
 
 ---

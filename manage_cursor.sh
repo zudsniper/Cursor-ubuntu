@@ -1,20 +1,5 @@
 #!/bin/bash
 
-# Check Ubuntu version and exit if 24.04
-UBUNTU_VERSION=$(lsb_release -rs 2>/dev/null)
-if [ "$UBUNTU_VERSION" = "24.04" ]; then
-    echo "-------------------------------------"
-    echo "==============================="
-    echo "❌ This script is for Ubuntu 22.04 only."
-    echo "==============================="    
-    echo "You are running Ubuntu 24.04."
-    echo "This script is for Ubuntu 22.04 only."
-    echo "Please use the installer for Ubuntu 24.04:"
-    echo "https://github.com/hieutt192/Cursor-ubuntu/tree/Cursor-ubuntu24.04"
-    echo "-------------------------------------"
-    exit 1
-fi
-
 # --- Global Variables ---
 # Change the install directory to a user home directory to avoid sudo in some steps
 # Or keep /opt/Cursor if you want to install system-wide
@@ -56,31 +41,108 @@ ask_for_restart() {
 }
 
 # --- Dependency Management ---
+
+# Detect the system package manager
+detect_package_manager() {
+    if command -v apt-get &> /dev/null; then
+        echo "apt"
+    elif command -v dnf &> /dev/null; then
+        echo "dnf"
+    elif command -v yum &> /dev/null; then
+        echo "yum"
+    elif command -v pacman &> /dev/null; then
+        echo "pacman"
+    elif command -v zypper &> /dev/null; then
+        echo "zypper"
+    else
+        echo "unknown"
+    fi
+}
+
+pkg_install() {
+    local pkg_manager
+    pkg_manager=$(detect_package_manager)
+    case "$pkg_manager" in
+        apt)    sudo apt-get update && sudo apt-get install -y "$@" ;;
+        dnf)    sudo dnf install -y "$@" ;;
+        yum)    sudo yum install -y "$@" ;;
+        pacman) sudo pacman -S --noconfirm "$@" ;;
+        zypper) sudo zypper install -y "$@" ;;
+        *)
+            print_error "Unsupported package manager. Please install the following manually: $*"
+            return 1
+            ;;
+    esac
+}
+
+install_fuse_library() {
+    local pkg_manager
+    pkg_manager=$(detect_package_manager)
+
+    # Already have libfuse2 loaded?
+    if ldconfig -p 2>/dev/null | grep -q libfuse.so.2; then
+        return 0
+    fi
+    # Fallback: search common library paths directly
+    if find /lib /usr/lib /lib64 /usr/lib64 -name 'libfuse.so.2' 2>/dev/null | grep -q .; then
+        return 0
+    fi
+
+    echo "📦 Installing FUSE library for AppImage support..."
+    case "$pkg_manager" in
+        apt)
+            # Try libfuse2t64 first (Ubuntu 24.04+), then libfuse2
+            if apt-cache show libfuse2t64 &>/dev/null; then
+                sudo apt-get update && sudo apt-get install -y libfuse2t64
+            elif apt-cache show libfuse2 &>/dev/null; then
+                sudo apt-get update && sudo apt-get install -y libfuse2
+            else
+                echo "⚠️ Could not find libfuse2 package. AppImage may not work without it."
+            fi
+            ;;
+        dnf|yum)
+            sudo "$pkg_manager" install -y fuse-libs
+            ;;
+        pacman)
+            sudo pacman -S --noconfirm fuse2
+            ;;
+        zypper)
+            sudo zypper install -y libfuse2
+            ;;
+        *)
+            echo "⚠️ Please install libfuse2 (FUSE 2) manually for AppImage support."
+            ;;
+    esac
+}
+
 install_dependencies() {
     local deps=("curl" "jq" "wget" "figlet")
-    
+
     for dep in "${deps[@]}"; do
         if ! command -v "$dep" &> /dev/null; then
             echo "📦 $dep is not installed. Installing..."
-            sudo apt-get update
-            sudo apt-get install -y "$dep"
+            pkg_install "$dep"
         fi
     done
-    
-    # Check libfuse2 separately as it uses dpkg
-    if ! dpkg -s libfuse2 &> /dev/null; then
-        echo "📦 libfuse2 is not installed. Installing..."
-        sudo apt-get update
-        sudo apt-get install -y libfuse2
-    fi
+
+    install_fuse_library
 }
 
 # --- Download Latest Cursor AppImage Function ---
 download_latest_cursor_appimage() {
-    API_URL="https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
     USER_AGENT="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
     DOWNLOAD_PATH="/tmp/latest-cursor.AppImage"
+
+    # Try the primary API first
+    API_URL="https://www.cursor.com/api/download?platform=linux-x64&releaseTrack=stable"
     FINAL_URL=$(curl -sL -A "$USER_AGENT" "$API_URL" | jq -r '.url // .downloadUrl')
+
+    # Fallback: resolve from the golden download endpoint
+    if [ -z "$FINAL_URL" ] || [ "$FINAL_URL" = "null" ]; then
+        FINAL_URL=$(curl -sIL -A "$USER_AGENT" \
+            "https://api2.cursor.sh/updates/download/golden/linux-x64-appimage/cursor/stable" \
+            2>/dev/null | grep -i '^location:' | tail -1 | tr -d '\r' | awk '{print $2}')
+    fi
 
     if [ -z "$FINAL_URL" ] || [ "$FINAL_URL" = "null" ]; then
         print_error "Could not get the final AppImage URL from Cursor API."
@@ -222,7 +284,7 @@ process_appimage() {
 installCursor() {
     if ! [ -f "$APPIMAGE_PATH" ]; then
         figlet -f slant "Install Cursor"
-        echo "💿 Installing Cursor AI IDE on Ubuntu..."
+        echo "💿 Installing Cursor AI IDE on Linux..."
         
         install_dependencies
         
@@ -302,7 +364,7 @@ updateCursor() {
 # --- Uninstall Function ---
 uninstallCursor() {
     figlet -f slant "Uninstall Cursor"
-    echo "🗑️ Uninstalling Cursor AI IDE from Ubuntu..."
+    echo "🗑️ Uninstalling Cursor AI IDE..."
     
     # Check if Cursor is installed
     if [ ! -f "$APPIMAGE_PATH" ] && [ ! -f "$DESKTOP_ENTRY_PATH" ]; then
@@ -382,7 +444,7 @@ install_dependencies
 
 # Welcome message
 figlet -f slant "Cursor AI IDE"
-echo "For Ubuntu 22.04"
+echo "For Linux"
 echo "-------------------------------------------------"
 echo "  /\\_/\\"
 echo " ( o.o )"
