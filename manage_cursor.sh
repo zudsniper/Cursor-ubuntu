@@ -83,6 +83,10 @@ install_fuse_library() {
     if ldconfig -p 2>/dev/null | grep -q libfuse.so.2; then
         return 0
     fi
+    # Fallback: search common library paths directly
+    if find /lib /usr/lib /lib64 /usr/lib64 -name 'libfuse.so.2' 2>/dev/null | grep -q .; then
+        return 0
+    fi
 
     echo "📦 Installing FUSE library for AppImage support..."
     case "$pkg_manager" in
